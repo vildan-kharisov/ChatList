@@ -168,11 +168,14 @@ class MainWindow(QMainWindow):
         # Таблица результатов
         self.results_table = QTableWidget()
         self.results_table.setColumnCount(3)
-        self.results_table.setHorizontalHeaderLabels(['Модель', 'Ответ', 'Выбрано'])
+        self.results_table.setHorizontalHeaderLabels(['Выбрано', 'Модель', 'Ответ'])
         self.results_table.horizontalHeader().setStretchLastSection(True)
-        self.results_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
-        self.results_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
-        self.results_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
+        self.results_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)  # Выбрано
+        self.results_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)  # Модель
+        self.results_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)  # Ответ
+        # Обработчик выделения ячейки (для активации кнопки при выделении колонки "Ответ")
+        self.results_table.itemSelectionChanged.connect(self.on_result_selection_changed)
+        self.results_table.cellClicked.connect(self.on_result_cell_clicked)
         self.results_table.setAlternatingRowColors(True)
         
         # Настройка многострочного отображения для колонки "Ответ"
@@ -183,7 +186,7 @@ class MainWindow(QMainWindow):
         class MultiLineDelegate(QStyledItemDelegate):
             def sizeHint(self, option, index):
                 size = super().sizeHint(option, index)
-                if index.column() == 1:  # Колонка "Ответ"
+                if index.column() == 2:  # Колонка "Ответ"
                     text = index.data(Qt.DisplayRole) or ""
                     if text:
                         # Вычисляем высоту на основе количества строк
@@ -195,7 +198,7 @@ class MainWindow(QMainWindow):
                 return size
         
         delegate = MultiLineDelegate(self.results_table)
-        self.results_table.setItemDelegateForColumn(1, delegate)
+        self.results_table.setItemDelegateForColumn(2, delegate)  # Колонка "Ответ"
         
         layout.addWidget(self.results_table)
         
@@ -216,6 +219,11 @@ class MainWindow(QMainWindow):
         self.send_btn = QPushButton('Отправить')
         self.send_btn.clicked.connect(self.send_requests)
         layout.addWidget(self.send_btn)
+        
+        self.open_btn = QPushButton('Открыть')
+        self.open_btn.clicked.connect(self.open_selected_response)
+        self.open_btn.setEnabled(False)
+        layout.addWidget(self.open_btn)
         
         self.save_btn = QPushButton('Сохранить выбранные')
         self.save_btn.clicked.connect(self.save_selected_results)
@@ -355,11 +363,14 @@ class MainWindow(QMainWindow):
         
         # Добавление строк в таблицу
         for i, model in enumerate(selected_models):
-            self.results_table.setItem(i, 0, QTableWidgetItem(model.name))
-            self.results_table.setItem(i, 1, QTableWidgetItem('Загрузка...'))
+            # Колонка 0: Выбрано (чекбокс)
             checkbox = QCheckBox()
-            self.results_table.setCellWidget(i, 2, checkbox)
-            self.results_table.item(i, 1).setFlags(self.results_table.item(i, 1).flags() & ~Qt.ItemIsEditable)
+            self.results_table.setCellWidget(i, 0, checkbox)
+            # Колонка 1: Модель
+            self.results_table.setItem(i, 1, QTableWidgetItem(model.name))
+            # Колонка 2: Ответ
+            self.results_table.setItem(i, 2, QTableWidgetItem('Загрузка...'))
+            self.results_table.item(i, 2).setFlags(self.results_table.item(i, 2).flags() & ~Qt.ItemIsEditable)
         
         # Отправка запросов в отдельных потоках
         self.workers = []
@@ -375,7 +386,7 @@ class MainWindow(QMainWindow):
         """Обработчик завершения запроса"""
         # Поиск строки с этой моделью
         for i in range(self.results_table.rowCount()):
-            item = self.results_table.item(i, 0)
+            item = self.results_table.item(i, 1)  # Колонка "Модель"
             if item:
                 model = models.get_model_by_id(model_id)
                 if model and item.text() == model.name:
@@ -397,9 +408,9 @@ class MainWindow(QMainWindow):
                     if len(response_text) > max_length:
                         response_item.setToolTip(response_text)  # Полный текст при наведении
                     
-                    self.results_table.setItem(i, 1, response_item)
-                    self.results_table.item(i, 1).setFlags(
-                        self.results_table.item(i, 1).flags() & ~Qt.ItemIsEditable)
+                    self.results_table.setItem(i, 2, response_item)  # Колонка "Ответ"
+                    self.results_table.item(i, 2).setFlags(
+                        self.results_table.item(i, 2).flags() & ~Qt.ItemIsEditable)
                     
                     # Автоматическая настройка высоты строки
                     self.results_table.resizeRowToContents(i)
@@ -442,10 +453,10 @@ class MainWindow(QMainWindow):
         errors = []
         
         for i in range(self.results_table.rowCount()):
-            checkbox = self.results_table.cellWidget(i, 2)
+            checkbox = self.results_table.cellWidget(i, 0)  # Колонка "Выбрано"
             if checkbox and checkbox.isChecked():
                 # Поиск соответствующего результата во временной таблице
-                model_name = self.results_table.item(i, 0).text()
+                model_name = self.results_table.item(i, 1).text()  # Колонка "Модель"
                 for temp_result in self.temp_results:
                     model = models.get_model_by_id(temp_result['model_id'])
                     if model and model.name == model_name:
@@ -473,6 +484,50 @@ class MainWindow(QMainWindow):
             else:
                 QMessageBox.warning(self, 'Предупреждение', 'Не выбрано ни одного результата для сохранения')
     
+    def on_result_selection_changed(self):
+        """Обработчик изменения выделения в таблице результатов"""
+        self.update_open_button_state()
+    
+    def on_result_cell_clicked(self, row: int, column: int):
+        """Обработчик клика по ячейке в таблице результатов"""
+        self.update_open_button_state()
+    
+    def update_open_button_state(self):
+        """Обновление состояния кнопки "Открыть" на основе выделения"""
+        selected_items = self.results_table.selectedItems()
+        if selected_items:
+            # Проверяем, выделена ли колонка "Ответ" (колонка 2)
+            for item in selected_items:
+                if item.column() == 2:  # Колонка "Ответ"
+                    # Проверяем, что в ячейке есть ответ (не "Загрузка...")
+                    if item.text() and item.text() != 'Загрузка...':
+                        self.open_btn.setEnabled(True)
+                        return
+            # Если выделена другая колонка, отключаем кнопку
+            self.open_btn.setEnabled(False)
+        else:
+            self.open_btn.setEnabled(False)
+    
+    def open_selected_response(self):
+        """Открыть диалог с форматированным ответом для выделенной ячейки в колонке "Ответ" """
+        selected_items = self.results_table.selectedItems()
+        if not selected_items:
+            QMessageBox.warning(self, 'Предупреждение', 'Выберите ячейку с ответом в колонке "Ответ"')
+            return
+        
+        # Ищем выделенную ячейку в колонке "Ответ" (колонка 2)
+        row = None
+        for item in selected_items:
+            if item.column() == 2:  # Колонка "Ответ"
+                row = item.row()
+                break
+        
+        if row is None:
+            QMessageBox.warning(self, 'Предупреждение', 'Выберите ячейку в колонке "Ответ"')
+            return
+        
+        self.open_response_dialog(row)
+    
     def clear_results(self):
         """Очистка результатов"""
         # Остановка всех активных потоков
@@ -485,6 +540,7 @@ class MainWindow(QMainWindow):
         self.temp_results = []
         self.results_table.setRowCount(0)
         self.save_btn.setEnabled(False)
+        self.open_btn.setEnabled(False)
         self.progress_bar.setVisible(False)
         self.send_btn.setEnabled(True)
         self.statusBar.showMessage('Результаты очищены')
@@ -510,6 +566,38 @@ class MainWindow(QMainWindow):
         """Показать окно сохраненных результатов"""
         window = ResultsWindow(self)
         window.exec_()
+    
+    def open_response_dialog(self, row: int):
+        """Открыть диалог с форматированным ответом в Markdown"""
+        try:
+            # Получение данных из таблицы
+            model_name_item = self.results_table.item(row, 1)  # Колонка "Модель"
+            response_item = self.results_table.item(row, 2)  # Колонка "Ответ"
+            
+            if not model_name_item or not response_item:
+                return
+            
+            model_name = model_name_item.text()
+            
+            # Поиск полного текста ответа во временной таблице
+            response_text = ""
+            for temp_result in self.temp_results:
+                model = models.get_model_by_id(temp_result['model_id'])
+                if model and model.name == model_name:
+                    response_text = temp_result.get('response_text', '')
+                    break
+            
+            # Если не нашли во временной таблице, берем из ячейки
+            if not response_text:
+                response_text = response_item.text()
+            
+            # Создание и показ диалога с форматированным Markdown
+            dialog = ResponseViewDialog(self, model_name, response_text)
+            dialog.exec_()
+        except Exception as e:
+            QMessageBox.critical(self, 'Ошибка', f'Не удалось открыть ответ:\n{e}')
+            import traceback
+            traceback.print_exc()
     
     def show_about(self):
         """Показать информацию о программе"""
@@ -793,10 +881,18 @@ class ResultsWindow(QDialog):
         self.table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
         self.table.setAlternatingRowColors(True)
         self.table.setSortingEnabled(True)  # Включение сортировки
+        # Обработчик выделения для активации кнопки "Открыть"
+        self.table.itemSelectionChanged.connect(self.on_result_selection_changed)
+        self.table.cellClicked.connect(self.on_result_cell_clicked)
         layout.addWidget(self.table)
         
         # Кнопки
         buttons_layout = QHBoxLayout()
+        
+        self.open_btn = QPushButton('Открыть')
+        self.open_btn.clicked.connect(self.open_selected_response)
+        self.open_btn.setEnabled(False)
+        buttons_layout.addWidget(self.open_btn)
         
         export_md_btn = QPushButton('Экспорт Markdown')
         export_md_btn.clicked.connect(lambda: self.export_results('markdown'))
@@ -894,6 +990,80 @@ class ResultsWindow(QDialog):
                 except Exception as e:
                     QMessageBox.critical(self, 'Ошибка', f'Не удалось экспортировать: {e}')
     
+    def on_result_selection_changed(self):
+        """Обработчик изменения выделения в таблице результатов"""
+        self.update_open_button_state()
+    
+    def on_result_cell_clicked(self, row: int, column: int):
+        """Обработчик клика по ячейке в таблице результатов"""
+        self.update_open_button_state()
+    
+    def update_open_button_state(self):
+        """Обновление состояния кнопки "Открыть" на основе выделения"""
+        selected_items = self.table.selectedItems()
+        if selected_items:
+            # Проверяем, выделена ли колонка "Ответ" (колонка 3)
+            for item in selected_items:
+                if item.column() == 3:  # Колонка "Ответ"
+                    if item.text() and item.text().strip():
+                        self.open_btn.setEnabled(True)
+                        return
+            # Если выделена другая колонка, отключаем кнопку
+            self.open_btn.setEnabled(False)
+        else:
+            self.open_btn.setEnabled(False)
+    
+    def open_selected_response(self):
+        """Открыть диалог с форматированным ответом для выделенной ячейки в колонке "Ответ" """
+        selected_items = self.table.selectedItems()
+        if not selected_items:
+            QMessageBox.warning(self, 'Предупреждение', 'Выберите ячейку с ответом в колонке "Ответ"')
+            return
+        
+        # Ищем выделенную ячейку в колонке "Ответ" (колонка 3)
+        row = None
+        for item in selected_items:
+            if item.column() == 3:  # Колонка "Ответ"
+                row = item.row()
+                break
+        
+        if row is None:
+            QMessageBox.warning(self, 'Предупреждение', 'Выберите ячейку в колонке "Ответ"')
+            return
+        
+        self.open_response_dialog(row)
+    
+    def open_response_dialog(self, row: int):
+        """Открыть диалог с форматированным ответом в Markdown"""
+        try:
+            # Получение данных из таблицы
+            result_id_item = self.table.item(row, 0)  # Колонка "ID"
+            model_name_item = self.table.item(row, 2)  # Колонка "Модель"
+            response_item = self.table.item(row, 3)  # Колонка "Ответ"
+            
+            if not result_id_item or not model_name_item or not response_item:
+                return
+            
+            model_name = model_name_item.text()
+            
+            # Получение полного текста ответа из БД
+            result_id = int(result_id_item.text())
+            result_data = db.get_result_by_id(result_id)
+            
+            if result_data:
+                response_text = result_data.get('response_text', '')
+            else:
+                # Если не нашли в БД, берем из ячейки
+                response_text = response_item.text()
+            
+            # Создание и показ диалога с форматированным Markdown
+            dialog = ResponseViewDialog(self, model_name, response_text)
+            dialog.exec_()
+        except Exception as e:
+            QMessageBox.critical(self, 'Ошибка', f'Не удалось открыть ответ:\n{e}')
+            import traceback
+            traceback.print_exc()
+    
     def delete_result(self):
         row = self.table.currentRow()
         if row >= 0:
@@ -904,6 +1074,125 @@ class ResultsWindow(QDialog):
             if reply == QMessageBox.Yes:
                 db.delete_result(result_id)
                 self.load_results()
+
+
+class ResponseViewDialog(QDialog):
+    """Диалог для просмотра ответа в форматированном Markdown"""
+    def __init__(self, parent=None, model_name: str = "", response_text: str = ""):
+        super().__init__(parent)
+        self.setWindowTitle(f'Ответ: {model_name}')
+        self.setModal(True)
+        self.resize(800, 600)
+        self.init_ui(model_name, response_text)
+    
+    def init_ui(self, model_name: str, response_text: str):
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+        
+        # Заголовок с названием модели
+        header_label = QLabel(f'<h2>Ответ модели: {model_name}</h2>')
+        layout.addWidget(header_label)
+        
+        # Текстовое поле для отображения Markdown
+        self.text_view = QTextEdit()
+        self.text_view.setReadOnly(True)
+        self.text_view.setLineWrapMode(QTextEdit.WidgetWidth)
+        
+        # Сохранение оригинального текста для копирования
+        self.original_text = response_text
+        
+        # Попытка использовать setMarkdown (доступно в Qt 5.14+)
+        try:
+            # Проверяем наличие метода setMarkdown
+            if hasattr(self.text_view, 'setMarkdown'):
+                self.text_view.setMarkdown(response_text)
+            else:
+                # Если setMarkdown недоступен, конвертируем markdown в HTML
+                self.text_view.setHtml(self.markdown_to_html(response_text))
+        except Exception as e:
+            # В случае ошибки используем обычный текст
+            self.text_view.setPlainText(response_text)
+        
+        layout.addWidget(self.text_view)
+        
+        # Кнопки
+        buttons_layout = QHBoxLayout()
+        buttons_layout.addStretch()
+        
+        copy_btn = QPushButton('Копировать')
+        copy_btn.clicked.connect(lambda: self.copy_to_clipboard(self.original_text))
+        buttons_layout.addWidget(copy_btn)
+        
+        close_btn = QPushButton('Закрыть')
+        close_btn.clicked.connect(self.accept)
+        buttons_layout.addWidget(close_btn)
+        
+        layout.addLayout(buttons_layout)
+    
+    def markdown_to_html(self, markdown_text: str) -> str:
+        """Простая конвертация Markdown в HTML (базовая поддержка)"""
+        html = markdown_text
+        
+        # Заголовки
+        import re
+        html = re.sub(r'^# (.*?)$', r'<h1>\1</h1>', html, flags=re.MULTILINE)
+        html = re.sub(r'^## (.*?)$', r'<h2>\1</h2>', html, flags=re.MULTILINE)
+        html = re.sub(r'^### (.*?)$', r'<h3>\1</h3>', html, flags=re.MULTILINE)
+        
+        # Жирный текст
+        html = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', html)
+        html = re.sub(r'__(.*?)__', r'<strong>\1</strong>', html)
+        
+        # Курсив
+        html = re.sub(r'\*(.*?)\*', r'<em>\1</em>', html)
+        html = re.sub(r'_(.*?)_', r'<em>\1</em>', html)
+        
+        # Код (inline)
+        html = re.sub(r'`([^`]+)`', r'<code>\1</code>', html)
+        
+        # Блоки кода
+        html = re.sub(r'```(\w+)?\n(.*?)```', r'<pre><code>\2</code></pre>', html, flags=re.DOTALL)
+        
+        # Списки
+        lines = html.split('\n')
+        in_list = False
+        result_lines = []
+        for line in lines:
+            if re.match(r'^[-*+] ', line):
+                if not in_list:
+                    result_lines.append('<ul>')
+                    in_list = True
+                result_lines.append(f'<li>{line[2:]}</li>')
+            elif re.match(r'^\d+\. ', line):
+                if not in_list:
+                    result_lines.append('<ol>')
+                    in_list = True
+                result_lines.append(f'<li>{re.sub(r"^\d+\. ", "", line)}</li>')
+            else:
+                if in_list:
+                    result_lines.append('</ul>' if '<ol>' not in '\n'.join(result_lines[-10:]) else '</ol>')
+                    in_list = False
+                if line.strip():
+                    result_lines.append(f'<p>{line}</p>')
+                else:
+                    result_lines.append('<br>')
+        
+        if in_list:
+            result_lines.append('</ul>')
+        
+        html = '\n'.join(result_lines)
+        
+        # Заменяем переносы строк на <br>
+        html = html.replace('\n', '<br>')
+        
+        return f'<div style="font-family: Arial, sans-serif; padding: 10px;">{html}</div>'
+    
+    def copy_to_clipboard(self, text: str):
+        """Копировать текст в буфер обмена"""
+        from PyQt5.QtWidgets import QApplication
+        clipboard = QApplication.clipboard()
+        clipboard.setText(text)
+        QMessageBox.information(self, 'Успех', 'Текст скопирован в буфер обмена')
 
 
 def main():
