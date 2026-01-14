@@ -641,8 +641,21 @@ class PromptsWindow(QDialog):
         self.table.setSortingEnabled(True)  # Включение сортировки
         layout.addWidget(self.table)
         
-        # Кнопки
+        # Кнопки CRUD
         buttons_layout = QHBoxLayout()
+        
+        create_btn = QPushButton('Создать')
+        create_btn.clicked.connect(self.create_prompt)
+        buttons_layout.addWidget(create_btn)
+        
+        edit_btn = QPushButton('Изменить')
+        edit_btn.clicked.connect(self.edit_prompt)
+        buttons_layout.addWidget(edit_btn)
+        
+        view_btn = QPushButton('Просмотр')
+        view_btn.clicked.connect(self.view_prompt)
+        buttons_layout.addWidget(view_btn)
+        
         buttons_layout.addStretch()
         
         delete_btn = QPushButton('Удалить')
@@ -675,16 +688,102 @@ class PromptsWindow(QDialog):
             self.table.setItem(i, 2, QTableWidgetItem(prompt['prompt']))
             self.table.setItem(i, 3, QTableWidgetItem(prompt.get('tags', '')))
     
-    def delete_prompt(self):
+    def create_prompt(self):
+        """Создание нового промта"""
+        dialog = PromptDialog(self)
+        if dialog.exec_() == QDialog.Accepted:
+            prompt_text, tags = dialog.get_values()
+            if prompt_text:
+                try:
+                    db.create_prompt(prompt_text, tags if tags else None)
+                    self.load_prompts()
+                    QMessageBox.information(self, 'Успех', 'Промт создан')
+                except Exception as e:
+                    QMessageBox.critical(self, 'Ошибка', f'Не удалось создать промт:\n{e}')
+    
+    def edit_prompt(self):
+        """Редактирование выбранного промта"""
         row = self.table.currentRow()
-        if row >= 0:
-            prompt_id = int(self.table.item(row, 0).text())
-            reply = QMessageBox.question(self, 'Подтверждение', 
-                                        f'Удалить промт #{prompt_id}?',
-                                        QMessageBox.Yes | QMessageBox.No)
-            if reply == QMessageBox.Yes:
+        if row < 0:
+            QMessageBox.warning(self, 'Предупреждение', 'Выберите промт для редактирования')
+            return
+        
+        prompt_id = int(self.table.item(row, 0).text())
+        prompt_data = db.get_prompt_by_id(prompt_id)
+        
+        if not prompt_data:
+            QMessageBox.warning(self, 'Ошибка', 'Промт не найден')
+            return
+        
+        dialog = PromptDialog(self, prompt_data)
+        if dialog.exec_() == QDialog.Accepted:
+            prompt_text, tags = dialog.get_values()
+            if prompt_text:
+                try:
+                    db.update_prompt(prompt_id, prompt=prompt_text, tags=tags if tags else None)
+                    self.load_prompts()
+                    QMessageBox.information(self, 'Успех', 'Промт обновлен')
+                except Exception as e:
+                    QMessageBox.critical(self, 'Ошибка', f'Не удалось обновить промт:\n{e}')
+    
+    def view_prompt(self):
+        """Просмотр полного текста промта"""
+        row = self.table.currentRow()
+        if row < 0:
+            QMessageBox.warning(self, 'Предупреждение', 'Выберите промт для просмотра')
+            return
+        
+        prompt_id = int(self.table.item(row, 0).text())
+        prompt_data = db.get_prompt_by_id(prompt_id)
+        
+        if not prompt_data:
+            QMessageBox.warning(self, 'Ошибка', 'Промт не найден')
+            return
+        
+        # Создание диалога для просмотра
+        view_dialog = QDialog(self)
+        view_dialog.setWindowTitle(f'Просмотр промта #{prompt_id}')
+        view_dialog.setModal(True)
+        view_dialog.resize(700, 500)
+        
+        layout = QVBoxLayout()
+        view_dialog.setLayout(layout)
+        
+        # Информация о промте
+        info_label = QLabel(f'<b>Дата:</b> {prompt_data["date"]}<br><b>Теги:</b> {prompt_data.get("tags", "")}')
+        layout.addWidget(info_label)
+        
+        # Текст промта
+        text_view = QTextEdit()
+        text_view.setReadOnly(True)
+        text_view.setPlainText(prompt_data['prompt'])
+        layout.addWidget(text_view)
+        
+        # Кнопка закрытия
+        buttons = QDialogButtonBox(QDialogButtonBox.Close)
+        buttons.rejected.connect(view_dialog.accept)
+        layout.addWidget(buttons)
+        
+        view_dialog.exec_()
+    
+    def delete_prompt(self):
+        """Удаление выбранного промта"""
+        row = self.table.currentRow()
+        if row < 0:
+            QMessageBox.warning(self, 'Предупреждение', 'Выберите промт для удаления')
+            return
+        
+        prompt_id = int(self.table.item(row, 0).text())
+        reply = QMessageBox.question(self, 'Подтверждение', 
+                                    f'Удалить промт #{prompt_id}?',
+                                    QMessageBox.Yes | QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            try:
                 db.delete_prompt(prompt_id)
                 self.load_prompts()
+                QMessageBox.information(self, 'Успех', 'Промт удален')
+            except Exception as e:
+                QMessageBox.critical(self, 'Ошибка', f'Не удалось удалить промт:\n{e}')
 
 
 class ModelsWindow(QDialog):
@@ -1074,6 +1173,58 @@ class ResultsWindow(QDialog):
             if reply == QMessageBox.Yes:
                 db.delete_result(result_id)
                 self.load_results()
+
+
+class PromptDialog(QDialog):
+    """Диалог для создания/редактирования промта"""
+    def __init__(self, parent=None, prompt_data=None):
+        super().__init__(parent)
+        self.prompt_data = prompt_data
+        self.setWindowTitle('Редактировать промт' if prompt_data else 'Создать промт')
+        self.setModal(True)
+        self.resize(600, 400)
+        self.init_ui()
+    
+    def init_ui(self):
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+        
+        form_layout = QFormLayout()
+        
+        # Поле для текста промта
+        self.prompt_input = QTextEdit()
+        if self.prompt_data:
+            self.prompt_input.setPlainText(self.prompt_data.get('prompt', ''))
+        self.prompt_input.setPlaceholderText('Введите текст промта...')
+        form_layout.addRow('Промт:', self.prompt_input)
+        
+        # Поле для тегов
+        self.tags_input = QLineEdit()
+        if self.prompt_data:
+            self.tags_input.setText(self.prompt_data.get('tags', ''))
+        self.tags_input.setPlaceholderText('Теги через запятую (необязательно)')
+        form_layout.addRow('Теги:', self.tags_input)
+        
+        layout.addLayout(form_layout)
+        
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+    
+    def get_values(self):
+        """Получить значения из формы"""
+        prompt_text = self.prompt_input.toPlainText().strip()
+        tags_text = self.tags_input.text().strip()
+        return prompt_text, tags_text if tags_text else None
+    
+    def accept(self):
+        """Проверка перед принятием"""
+        prompt_text, _ = self.get_values()
+        if not prompt_text:
+            QMessageBox.warning(self, 'Ошибка', 'Введите текст промта')
+            return
+        super().accept()
 
 
 class ResponseViewDialog(QDialog):
