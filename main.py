@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import (
     QTextEdit, QPushButton, QComboBox, QTableWidget, QTableWidgetItem,
     QCheckBox, QLabel, QMessageBox, QProgressBar, QGroupBox, QSplitter,
     QHeaderView, QMenuBar, QMenu, QStatusBar, QDialog, QDialogButtonBox,
-    QFormLayout, QLineEdit, QStyledItemDelegate
+    QFormLayout, QLineEdit, QStyledItemDelegate, QTabWidget, QListWidget
 )
 from PyQt5.QtCore import QSize
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
@@ -18,6 +18,7 @@ from typing import List, Dict, Optional
 import db
 import models
 import network
+import prompt_improver
 
 
 class RequestWorker(QThread):
@@ -130,6 +131,16 @@ class MainWindow(QMainWindow):
         self.prompt_input.setPlaceholderText('Введите промт или выберите из списка...')
         self.prompt_input.setMaximumHeight(100)
         layout.addWidget(self.prompt_input)
+        
+        # Кнопка "Улучшить промт"
+        improve_layout = QHBoxLayout()
+        self.improve_btn = QPushButton('Улучшить промт')
+        self.improve_btn.clicked.connect(self.improve_prompt)
+        self.improve_btn.setEnabled(False)  # Активируется при вводе текста
+        self.prompt_input.textChanged.connect(self.on_prompt_text_changed)
+        improve_layout.addWidget(self.improve_btn)
+        improve_layout.addStretch()
+        layout.addLayout(improve_layout)
         
         group.setLayout(layout)
         return group
@@ -276,6 +287,11 @@ class MainWindow(QMainWindow):
         for checkbox in self.model_checkboxes.values():
             checkbox.setChecked(False)
     
+    def on_prompt_text_changed(self):
+        """Обработчик изменения текста в поле промта"""
+        text = self.prompt_input.toPlainText().strip()
+        self.improve_btn.setEnabled(len(text) > 0)
+    
     def on_prompt_selected(self, index):
         """Обработчик выбора промта из списка"""
         prompt_id = self.prompt_combo.itemData(index)
@@ -294,6 +310,29 @@ class MainWindow(QMainWindow):
             self.current_prompt_id = None
             if not self.prompt_input.toPlainText().strip():
                 self.clear_results()
+    
+    def improve_prompt(self):
+        """Открыть диалог улучшения промта"""
+        prompt_text = self.prompt_input.toPlainText().strip()
+        if not prompt_text:
+            QMessageBox.warning(self, 'Предупреждение', 'Введите промт для улучшения')
+            return
+        
+        # Получение списка активных моделей для выбора
+        active_models = models.get_active_models()
+        if not active_models:
+            QMessageBox.warning(self, 'Предупреждение', 'Нет активных моделей для улучшения промта')
+            return
+        
+        # Открытие диалога улучшения
+        dialog = PromptImproverDialog(self, prompt_text, active_models)
+        if dialog.exec_() == QDialog.Accepted:
+            selected_text = dialog.get_selected_text()
+            if selected_text:
+                self.prompt_input.setPlainText(selected_text)
+                # Сбрасываем выбор сохраненного промта, так как текст изменен
+                self.prompt_combo.setCurrentIndex(0)
+                self.current_prompt_id = None
     
     def get_selected_models(self) -> List[models.Model]:
         """Получить список выбранных моделей"""
@@ -1225,6 +1264,257 @@ class PromptDialog(QDialog):
             QMessageBox.warning(self, 'Ошибка', 'Введите текст промта')
             return
         super().accept()
+
+
+class PromptImproverDialog(QDialog):
+    """Диалог для улучшения промтов с помощью AI"""
+    def __init__(self, parent=None, original_prompt: str = "", available_models: List = None):
+        super().__init__(parent)
+        self.original_prompt = original_prompt
+        self.available_models = available_models or []
+        self.selected_text = None
+        self.variants_data = None
+        self.setWindowTitle('Улучшение промта')
+        self.setModal(True)
+        self.resize(900, 700)
+        self.init_ui()
+        self.load_variants()
+    
+    def init_ui(self):
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+        
+        # Выбор модели для улучшения
+        model_layout = QHBoxLayout()
+        model_layout.addWidget(QLabel('Модель для улучшения:'))
+        self.model_combo = QComboBox()
+        for model in self.available_models:
+            self.model_combo.addItem(model.name, model)
+        model_layout.addWidget(self.model_combo, 1)
+        layout.addLayout(model_layout)
+        
+        # Исходный промт
+        original_group = QGroupBox('Исходный промт')
+        original_layout = QVBoxLayout()
+        self.original_text = QTextEdit()
+        self.original_text.setReadOnly(True)
+        self.original_text.setPlainText(self.original_prompt)
+        self.original_text.setMaximumHeight(80)
+        original_layout.addWidget(self.original_text)
+        original_group.setLayout(original_layout)
+        layout.addWidget(original_group)
+        
+        # Вкладки для вариантов
+        self.tabs = QTabWidget()
+        
+        # Вкладка "Улучшенный"
+        improved_widget = QWidget()
+        improved_layout = QVBoxLayout()
+        improved_widget.setLayout(improved_layout)
+        self.improved_text = QTextEdit()
+        self.improved_text.setReadOnly(True)
+        improved_layout.addWidget(QLabel('<b>Улучшенная версия:</b>'))
+        improved_layout.addWidget(self.improved_text)
+        improved_btn = QPushButton('Подставить в поле ввода')
+        improved_btn.clicked.connect(lambda: self.select_variant('improved'))
+        improved_layout.addWidget(improved_btn)
+        self.tabs.addTab(improved_widget, 'Улучшенный')
+        
+        # Вкладка "Варианты"
+        variants_widget = QWidget()
+        variants_layout = QVBoxLayout()
+        variants_widget.setLayout(variants_layout)
+        variants_layout.addWidget(QLabel('<b>Альтернативные варианты:</b>'))
+        self.variants_list = QListWidget()
+        self.variants_list.itemDoubleClicked.connect(lambda: self.select_variant('variant'))
+        variants_layout.addWidget(self.variants_list)
+        variant_btn = QPushButton('Подставить выбранный вариант')
+        variant_btn.clicked.connect(lambda: self.select_variant('variant'))
+        variants_layout.addWidget(variant_btn)
+        self.tabs.addTab(variants_widget, 'Варианты')
+        
+        # Вкладка "Специализированные"
+        specialized_widget = QWidget()
+        specialized_layout = QVBoxLayout()
+        specialized_widget.setLayout(specialized_layout)
+        
+        # Код
+        code_layout = QVBoxLayout()
+        code_layout.addWidget(QLabel('<b>Для задач программирования:</b>'))
+        self.code_text = QTextEdit()
+        self.code_text.setReadOnly(True)
+        self.code_text.setMaximumHeight(100)
+        code_layout.addWidget(self.code_text)
+        code_btn = QPushButton('Подставить вариант для кода')
+        code_btn.clicked.connect(lambda: self.select_variant('code'))
+        code_layout.addWidget(code_btn)
+        specialized_layout.addLayout(code_layout)
+        
+        # Анализ
+        analysis_layout = QVBoxLayout()
+        analysis_layout.addWidget(QLabel('<b>Для аналитических задач:</b>'))
+        self.analysis_text = QTextEdit()
+        self.analysis_text.setReadOnly(True)
+        self.analysis_text.setMaximumHeight(100)
+        analysis_layout.addWidget(self.analysis_text)
+        analysis_btn = QPushButton('Подставить вариант для анализа')
+        analysis_btn.clicked.connect(lambda: self.select_variant('analysis'))
+        analysis_layout.addWidget(analysis_btn)
+        specialized_layout.addLayout(analysis_layout)
+        
+        # Креатив
+        creative_layout = QVBoxLayout()
+        creative_layout.addWidget(QLabel('<b>Для креативных задач:</b>'))
+        self.creative_text = QTextEdit()
+        self.creative_text.setReadOnly(True)
+        self.creative_text.setMaximumHeight(100)
+        creative_layout.addWidget(self.creative_text)
+        creative_btn = QPushButton('Подставить вариант для креатива')
+        creative_btn.clicked.connect(lambda: self.select_variant('creative'))
+        creative_layout.addWidget(creative_btn)
+        specialized_layout.addLayout(creative_layout)
+        
+        specialized_layout.addStretch()
+        self.tabs.addTab(specialized_widget, 'Специализированные')
+        
+        layout.addWidget(self.tabs)
+        
+        # Индикатор загрузки
+        self.progress_label = QLabel('Загрузка вариантов улучшения...')
+        self.progress_label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(self.progress_label)
+        
+        # Кнопки
+        buttons_layout = QHBoxLayout()
+        buttons_layout.addStretch()
+        
+        close_btn = QPushButton('Закрыть')
+        close_btn.clicked.connect(self.accept)
+        buttons_layout.addWidget(close_btn)
+        
+        layout.addLayout(buttons_layout)
+    
+    def load_variants(self):
+        """Загрузка вариантов улучшения"""
+        if not self.available_models:
+            self.progress_label.setText('Нет доступных моделей')
+            return
+        
+        # Выбор модели (по умолчанию первая, предпочтительно OpenRouter)
+        selected_model = None
+        for model in self.available_models:
+            if model.model_type.lower() == 'openrouter':
+                selected_model = model
+                break
+        
+        if not selected_model:
+            selected_model = self.available_models[0]
+        
+        # Установка выбранной модели в комбобокс
+        for i in range(self.model_combo.count()):
+            if self.model_combo.itemData(i) == selected_model:
+                self.model_combo.setCurrentIndex(i)
+                break
+        
+        # Загрузка вариантов в отдельном потоке
+        from PyQt5.QtCore import QThread, pyqtSignal
+        
+        class VariantsLoader(QThread):
+            finished = pyqtSignal(dict)
+            
+            def __init__(self, model, prompt):
+                super().__init__()
+                self.model = model
+                self.prompt = prompt
+            
+            def run(self):
+                variants = prompt_improver.get_prompt_variants(self.model, self.prompt)
+                self.finished.emit(variants)
+        
+        self.loader = VariantsLoader(selected_model, self.original_prompt)
+        self.loader.finished.connect(self.on_variants_loaded)
+        self.loader.start()
+    
+    def on_variants_loaded(self, variants_data: Dict):
+        """Обработчик загрузки вариантов"""
+        self.variants_data = variants_data
+        self.progress_label.setVisible(False)
+        
+        if not variants_data.get('success', False):
+            error = variants_data.get('error', 'Неизвестная ошибка')
+            QMessageBox.warning(self, 'Ошибка', f'Не удалось улучшить промт:\n{error}')
+            # Показываем исходный промт как улучшенный
+            self.improved_text.setPlainText(self.original_prompt)
+            return
+        
+        # Заполнение улучшенной версии
+        improved = variants_data.get('improved', self.original_prompt)
+        self.improved_text.setPlainText(improved)
+        
+        # Заполнение вариантов
+        variants = variants_data.get('variants', [])
+        self.variants_list.clear()
+        for variant in variants:
+            self.variants_list.addItem(variant)
+        
+        # Заполнение специализированных версий
+        code_version = variants_data.get('code_version')
+        if code_version:
+            self.code_text.setPlainText(code_version)
+        else:
+            self.code_text.setPlainText('Не доступно')
+        
+        analysis_version = variants_data.get('analysis_version')
+        if analysis_version:
+            self.analysis_text.setPlainText(analysis_version)
+        else:
+            self.analysis_text.setPlainText('Не доступно')
+        
+        creative_version = variants_data.get('creative_version')
+        if creative_version:
+            self.creative_text.setPlainText(creative_version)
+        else:
+            self.creative_text.setPlainText('Не доступно')
+    
+    def select_variant(self, variant_type: str):
+        """Выбор варианта для подстановки"""
+        if variant_type == 'improved':
+            self.selected_text = self.improved_text.toPlainText()
+        elif variant_type == 'variant':
+            current_item = self.variants_list.currentItem()
+            if current_item:
+                self.selected_text = current_item.text()
+            else:
+                QMessageBox.warning(self, 'Предупреждение', 'Выберите вариант из списка')
+                return
+        elif variant_type == 'code':
+            text = self.code_text.toPlainText()
+            if text and text != 'Не доступно':
+                self.selected_text = text
+            else:
+                QMessageBox.warning(self, 'Предупреждение', 'Вариант для кода недоступен')
+                return
+        elif variant_type == 'analysis':
+            text = self.analysis_text.toPlainText()
+            if text and text != 'Не доступно':
+                self.selected_text = text
+            else:
+                QMessageBox.warning(self, 'Предупреждение', 'Вариант для анализа недоступен')
+                return
+        elif variant_type == 'creative':
+            text = self.creative_text.toPlainText()
+            if text and text != 'Не доступно':
+                self.selected_text = text
+            else:
+                QMessageBox.warning(self, 'Предупреждение', 'Вариант для креатива недоступен')
+                return
+        
+        if self.selected_text:
+            self.accept()
+    
+    def get_selected_text(self) -> Optional[str]:
+        """Получить выбранный текст"""
+        return self.selected_text
 
 
 class ResponseViewDialog(QDialog):
