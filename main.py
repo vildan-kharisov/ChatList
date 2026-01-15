@@ -47,6 +47,7 @@ class MainWindow(QMainWindow):
         self.init_ui()
         self.load_prompts()
         self.load_models()
+        self.apply_settings()  # Применяем сохраненные настройки
     
     def init_database(self):
         """Инициализация базы данных"""
@@ -118,6 +119,10 @@ class MainWindow(QMainWindow):
         file_menu.addAction('Сохраненные результаты', self.show_results_window)
         file_menu.addSeparator()
         file_menu.addAction('Выход', self.close)
+        
+        # Меню "Настройки"
+        settings_menu = menubar.addMenu('Настройки')
+        settings_menu.addAction('Настройки...', self.show_settings)
         
         # Меню "Справка"
         help_menu = menubar.addMenu('Справка')
@@ -648,12 +653,295 @@ class MainWindow(QMainWindow):
             import traceback
             traceback.print_exc()
     
+    def show_settings(self):
+        """Показать окно настроек"""
+        dialog = SettingsWindow(self)
+        if dialog.exec_() == QDialog.Accepted:
+            self.apply_settings()
+    
+    def apply_settings(self):
+        """Применить сохраненные настройки"""
+        # Применение темы
+        theme = db.get_setting('theme', 'light')
+        self.apply_theme(theme)
+        
+        # Применение размера шрифта
+        font_size = db.get_setting('font_size', '10')
+        try:
+            font_size_int = int(font_size)
+            self.apply_font_size(font_size_int)
+        except ValueError:
+            pass
+    
+    def apply_theme(self, theme: str):
+        """Применить тему (light/dark)"""
+        if theme == 'dark':
+            dark_stylesheet = """
+                QMainWindow {
+                    background-color: #2b2b2b;
+                    color: #ffffff;
+                }
+                QWidget {
+                    background-color: #2b2b2b;
+                    color: #ffffff;
+                }
+                QGroupBox {
+                    border: 1px solid #555555;
+                    border-radius: 5px;
+                    margin-top: 10px;
+                    padding-top: 10px;
+                    font-weight: bold;
+                }
+                QGroupBox::title {
+                    subcontrol-origin: margin;
+                    left: 10px;
+                    padding: 0 5px;
+                }
+                QTextEdit, QLineEdit {
+                    background-color: #3c3c3c;
+                    color: #ffffff;
+                    border: 1px solid #555555;
+                    border-radius: 3px;
+                    padding: 5px;
+                }
+                QPushButton {
+                    background-color: #404040;
+                    color: #ffffff;
+                    border: 1px solid #555555;
+                    border-radius: 3px;
+                    padding: 5px 15px;
+                }
+                QPushButton:hover {
+                    background-color: #505050;
+                }
+                QPushButton:pressed {
+                    background-color: #353535;
+                }
+                QPushButton:disabled {
+                    background-color: #2b2b2b;
+                    color: #888888;
+                }
+                QComboBox {
+                    background-color: #3c3c3c;
+                    color: #ffffff;
+                    border: 1px solid #555555;
+                    border-radius: 3px;
+                    padding: 5px;
+                }
+                QComboBox:hover {
+                    background-color: #454545;
+                }
+                QComboBox::drop-down {
+                    border: none;
+                }
+                QComboBox QAbstractItemView {
+                    background-color: #3c3c3c;
+                    color: #ffffff;
+                    selection-background-color: #505050;
+                }
+                QTableWidget {
+                    background-color: #2b2b2b;
+                    color: #ffffff;
+                    gridline-color: #555555;
+                    border: 1px solid #555555;
+                }
+                QTableWidget::item {
+                    background-color: #2b2b2b;
+                    color: #ffffff;
+                }
+                QTableWidget::item:selected {
+                    background-color: #505050;
+                    color: #ffffff;
+                }
+                QHeaderView::section {
+                    background-color: #404040;
+                    color: #ffffff;
+                    padding: 5px;
+                    border: 1px solid #555555;
+                }
+                QCheckBox {
+                    color: #ffffff;
+                }
+                QCheckBox::indicator {
+                    background-color: #3c3c3c;
+                    border: 1px solid #555555;
+                    border-radius: 3px;
+                }
+                QCheckBox::indicator:checked {
+                    background-color: #0078d4;
+                }
+                QLabel {
+                    color: #ffffff;
+                }
+                QProgressBar {
+                    border: 1px solid #555555;
+                    border-radius: 3px;
+                    text-align: center;
+                    background-color: #3c3c3c;
+                    color: #ffffff;
+                }
+                QProgressBar::chunk {
+                    background-color: #0078d4;
+                }
+                QStatusBar {
+                    background-color: #2b2b2b;
+                    color: #ffffff;
+                }
+                QMenuBar {
+                    background-color: #2b2b2b;
+                    color: #ffffff;
+                }
+                QMenuBar::item {
+                    background-color: transparent;
+                }
+                QMenuBar::item:selected {
+                    background-color: #505050;
+                }
+                QMenu {
+                    background-color: #3c3c3c;
+                    color: #ffffff;
+                    border: 1px solid #555555;
+                }
+                QMenu::item:selected {
+                    background-color: #505050;
+                }
+                QDialog {
+                    background-color: #2b2b2b;
+                    color: #ffffff;
+                }
+                QTabWidget::pane {
+                    border: 1px solid #555555;
+                    background-color: #2b2b2b;
+                }
+                QTabBar::tab {
+                    background-color: #3c3c3c;
+                    color: #ffffff;
+                    border: 1px solid #555555;
+                    padding: 5px 15px;
+                }
+                QTabBar::tab:selected {
+                    background-color: #505050;
+                }
+                QListWidget {
+                    background-color: #3c3c3c;
+                    color: #ffffff;
+                    border: 1px solid #555555;
+                }
+                QListWidget::item:selected {
+                    background-color: #505050;
+                }
+            """
+            self.setStyleSheet(dark_stylesheet)
+        else:  # light theme
+            self.setStyleSheet("")  # Сброс к стандартной теме
+    
+    def apply_font_size(self, font_size: int):
+        """Применить размер шрифта"""
+        font = self.font()
+        font.setPointSize(font_size)
+        self.setFont(font)
+        # Применяем шрифт ко всем виджетам
+        for widget in self.findChildren(QWidget):
+            widget.setFont(font)
+    
     def show_about(self):
         """Показать информацию о программе"""
-        QMessageBox.about(self, 'О программе', 
-                         'ChatList v1.0\n\n'
-                         'Приложение для сравнения ответов различных нейросетей\n'
-                         'на один и тот же промт.')
+        about_text = """
+        <h2>ChatList v1.0</h2>
+        <p><b>Приложение для сравнения ответов различных нейросетей</b></p>
+        <p>ChatList позволяет отправлять один и тот же промт в несколько нейросетей одновременно и сравнивать их ответы в удобной таблице.</p>
+        <hr>
+        <p><b>Основные возможности:</b></p>
+        <ul>
+            <li>Отправка промта в несколько моделей одновременно</li>
+            <li>Сравнение ответов в таблице</li>
+            <li>Сохранение интересных результатов</li>
+            <li>Управление промтами, моделями и результатами</li>
+            <li>AI-ассистент для улучшения промтов</li>
+            <li>Экспорт результатов в Markdown/JSON</li>
+        </ul>
+        <hr>
+        <p><b>Поддерживаемые API:</b></p>
+        <ul>
+            <li>OpenAI (GPT-3.5, GPT-4)</li>
+            <li>DeepSeek</li>
+            <li>Groq</li>
+            <li>Anthropic (Claude)</li>
+            <li>OpenRouter</li>
+        </ul>
+        <hr>
+        <p>Разработано с использованием Python и PyQt5</p>
+        """
+        QMessageBox.about(self, 'О программе', about_text)
+
+
+class SettingsWindow(QDialog):
+    """Окно настроек приложения"""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle('Настройки')
+        self.setModal(True)
+        self.resize(400, 250)
+        self.init_ui()
+        self.load_settings()
+    
+    def init_ui(self):
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+        
+        form_layout = QFormLayout()
+        
+        # Выбор темы
+        self.theme_combo = QComboBox()
+        self.theme_combo.addItem('Светлая', 'light')
+        self.theme_combo.addItem('Темная', 'dark')
+        form_layout.addRow('Тема оформления:', self.theme_combo)
+        
+        # Размер шрифта
+        self.font_size_spin = QLineEdit()
+        self.font_size_spin.setPlaceholderText('10')
+        form_layout.addRow('Размер шрифта (pt):', self.font_size_spin)
+        
+        layout.addLayout(form_layout)
+        layout.addStretch()
+        
+        # Кнопки
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.accepted.connect(self.save_settings)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+    
+    def load_settings(self):
+        """Загрузить текущие настройки"""
+        theme = db.get_setting('theme', 'light')
+        index = self.theme_combo.findData(theme)
+        if index >= 0:
+            self.theme_combo.setCurrentIndex(index)
+        
+        font_size = db.get_setting('font_size', '10')
+        self.font_size_spin.setText(font_size)
+    
+    def save_settings(self):
+        """Сохранить настройки"""
+        theme = self.theme_combo.currentData()
+        font_size = self.font_size_spin.text().strip()
+        
+        # Валидация размера шрифта
+        try:
+            font_size_int = int(font_size)
+            if font_size_int < 8 or font_size_int > 24:
+                QMessageBox.warning(self, 'Ошибка', 'Размер шрифта должен быть от 8 до 24')
+                return
+        except ValueError:
+            QMessageBox.warning(self, 'Ошибка', 'Размер шрифта должен быть числом')
+            return
+        
+        # Сохранение в БД
+        db.set_setting('theme', theme, 'Тема оформления (light/dark)')
+        db.set_setting('font_size', font_size, 'Размер шрифта в пунктах')
+        
+        QMessageBox.information(self, 'Успех', 'Настройки сохранены. Изменения применятся немедленно.')
+        self.accept()
 
 
 class PromptsWindow(QDialog):
