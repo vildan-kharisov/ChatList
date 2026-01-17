@@ -36,3 +36,6 @@ logs/
 installer/
 version.tmp
 *.iss.bak
+
+# Release notes (опционально, можно коммитить)
+# RELEASE_NOTES.md

@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatList - Сравнение ответов нейросетей</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            padding: 60px 20px;
+            color: white;
+        }
+        
+        header h1 {
+            font-size: 3.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        header p {
+            font-size: 1.3em;
+            opacity: 0.95;
+        }
+        
+        .version-badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 5px 15px;
+            border-radius: 20px;
+            margin-top: 15px;
+            font-size: 0.9em;
+        }
+        
+        .content {
+            background: white;
+            border-radius: 10px;
+            padding: 40px;
+            margin: 40px auto;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        
+        .download-section {
+            text-align: center;
+            padding: 40px 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin: 30px 0;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 15px 30px;
+            margin: 10px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 1.1em;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            box-shadow: 0 4px 15px rgba(108, 117, 125, 0.4);
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin: 40px 0;
+        }
+        
+        .feature {
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .feature h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .screenshots {
+            margin: 40px 0;
+        }
+        
+        .screenshots h2 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .screenshot-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .screenshot {
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .screenshot img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .requirements {
+            background: #e9ecef;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 30px 0;
+        }
+        
+        .requirements ul {
+            list-style-position: inside;
+            margin-top: 10px;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: white;
+            opacity: 0.9;
+        }
+        
+        .changelog {
+            margin: 40px 0;
+        }
+        
+        .changelog h2 {
+            margin-bottom: 20px;
+        }
+        
+        .changelog-item {
+            padding: 15px;
+            margin: 10px 0;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border-left: 3px solid #667eea;
+        }
+        
+        .changelog-item h4 {
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 2.5em;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            .features {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🐍 ChatList</h1>
+            <p>Приложение для сравнения ответов различных нейросетей</p>
+            <div class="version-badge">Версия 1.0.0</div>
+        </header>
+        
+        <div class="content">
+            <div class="download-section">
+                <h2>📥 Скачать ChatList</h2>
+                <p>Выберите версию для установки:</p>
+                <a href="https://github.com/YOUR_USERNAME/YOUR_REPOSITORY/releases/latest/download/ChatList-Setup-v1.0.0.exe" class="btn">
+                    ⬇️ Установщик (рекомендуется)
+                </a>
+                <a href="https://github.com/YOUR_USERNAME/YOUR_REPOSITORY/releases/latest/download/ChatList-v1.0.0.exe" class="btn btn-secondary">
+                    📦 Portable версия
+                </a>
+                <p style="margin-top: 20px; font-size: 0.9em; color: #666;">
+                    Все релизы доступны на <a href="https://github.com/YOUR_USERNAME/YOUR_REPOSITORY/releases" style="color: #667eea;">странице релизов</a>
+                </p>
+            </div>
+            
+            <section>
+                <h2>✨ Основные возможности</h2>
+                <div class="features">
+                    <div class="feature">
+                        <h3>🚀 Множественные запросы</h3>
+                        <p>Отправляйте один промт в несколько нейросетей одновременно и сравнивайте результаты</p>
+                    </div>
+                    <div class="feature">
+                        <h3>💾 Сохранение результатов</h3>
+                        <p>Сохраняйте интересные ответы в базу данных для последующего анализа</p>
+                    </div>
+                    <div class="feature">
+                        <h3>🤖 Поддержка множества API</h3>
+                        <p>OpenAI, DeepSeek, Groq, Anthropic, OpenRouter и другие</p>
+                    </div>
+                    <div class="feature">
+                        <h3>📝 Управление промтами</h3>
+                        <p>Сохраняйте, редактируйте и переиспользуйте промты с тегами</p>
+                    </div>
+                    <div class="feature">
+                        <h3>🎨 Настройки интерфейса</h3>
+                        <p>Светлая и темная тема, настройка размера шрифта</p>
+                    </div>
+                    <div class="feature">
+                        <h3>🔍 AI-ассистент</h3>
+                        <p>Улучшайте промты с помощью AI-ассистента</p>
+                    </div>
+                </div>
+            </section>
+            
+            <section class="requirements">
+                <h2>📋 Требования к системе</h2>
+                <ul>
+                    <li>Windows 10/11 (64-bit)</li>
+                    <li>Интернет-соединение для работы с API</li>
+                    <li>API-ключи от выбранных провайдеров</li>
+                </ul>
+            </section>
+            
+            <section class="changelog">
+                <h2>📝 История изменений</h2>
+                <div class="changelog-item">
+                    <h4>Версия 1.0.0</h4>
+                    <p>Первый релиз ChatList</p>
+                    <ul>
+                        <li>Отправка промтов в несколько нейросетей</li>
+                        <li>Управление промтами, моделями и результатами</li>
+                        <li>AI-ассистент для улучшения промтов</li>
+                        <li>Экспорт результатов в Markdown/JSON</li>
+                        <li>Настройки темы и размера шрифта</li>
+                    </ul>
+                </div>
+            </section>
+            
+            <section>
+                <h2>🚀 Быстрый старт</h2>
+                <ol style="margin-left: 20px; margin-top: 15px;">
+                    <li>Скачайте и установите ChatList</li>
+                    <li>Создайте файл <code>.env.local</code> в папке установки (или используйте настройки в программе)</li>
+                    <li>Добавьте ваши API-ключи в файл</li>
+                    <li>Настройте модели в меню "Файл → Управление моделями"</li>
+                    <li>Начните использовать приложение!</li>
+                </ol>
+            </section>
+            
+            <section style="margin-top: 40px;">
+                <h2>📚 Документация</h2>
+                <p>Подробная документация доступна в <a href="https://github.com/YOUR_USERNAME/YOUR_REPOSITORY/blob/main/README.md" style="color: #667eea;">README.md</a></p>
+            </section>
+            
+            <section style="margin-top: 40px;">
+                <h2>🐛 Сообщить о проблеме</h2>
+                <p>Нашли ошибку или есть предложение? Создайте <a href="https://github.com/YOUR_USERNAME/YOUR_REPOSITORY/issues" style="color: #667eea;">Issue на GitHub</a></p>
+            </section>
+        </div>
+        
+        <footer>
+            <p>© 2024 ChatList. Разработано с ❤️ на Python и PyQt5</p>
+            <p style="margin-top: 10px;">
+                <a href="https://github.com/YOUR_USERNAME/YOUR_REPOSITORY" style="color: white; text-decoration: underline;" id="github-link">GitHub</a> |
+                <a href="https://github.com/YOUR_USERNAME/YOUR_REPOSITORY/releases" style="color: white; text-decoration: underline;" id="releases-footer-link">Релизы</a> |
+                <a href="https://github.com/YOUR_USERNAME/YOUR_REPOSITORY/issues" style="color: white; text-decoration: underline;" id="issues-link">Issues</a>
+            </p>
+        </footer>
+    </div>
+    
+    <script>
+        // Замените YOUR_USERNAME и YOUR_REPOSITORY на ваши данные
+        const GITHUB_USERNAME = 'YOUR_USERNAME';
+        const GITHUB_REPOSITORY = 'YOUR_REPOSITORY';
+        const GITHUB_BASE = `https://github.com/${GITHUB_USERNAME}/${GITHUB_REPOSITORY}`;
+        
+        // Обновление всех ссылок
+        document.querySelectorAll('[id$="-link"]').forEach(link => {
+            if (link.href.includes('YOUR_USERNAME')) {
+                link.href = link.href.replace('YOUR_USERNAME/YOUR_REPOSITORY', `${GITHUB_USERNAME}/${GITHUB_REPOSITORY}`);
+            }
+        });
+        
+        // Автоматическое обновление ссылок на последний релиз
+        if (GITHUB_USERNAME !== 'YOUR_USERNAME' && GITHUB_REPOSITORY !== 'YOUR_REPOSITORY') {
+            fetch(`https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPOSITORY}/releases/latest`)
+                .then(response => response.json())
+                .then(data => {
+                    const version = data.tag_name.replace('v', '');
+                    const installerLink = document.getElementById('installer-link');
+                    const portableLink = document.getElementById('portable-link');
+                    if (installerLink) {
+                        installerLink.href = `${GITHUB_BASE}/releases/latest/download/ChatList-Setup-v${version}.exe`;
+                    }
+                    if (portableLink) {
+                        portableLink.href = `${GITHUB_BASE}/releases/latest/download/ChatList-v${version}.exe`;
+                    }
+                })
+                .catch(err => console.log('Не удалось загрузить информацию о релизе:', err));
+        }
+    </script>
+</body>
+</html>
