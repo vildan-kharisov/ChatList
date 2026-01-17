@@ -209,14 +209,13 @@
             <div class="download-section">
                 <h2>📥 Скачать ChatList</h2>
                 <p>Выберите версию для установки:</p>
-                <a href="https://github.com/YOUR_USERNAME/YOUR_REPOSITORY/releases/latest/download/ChatList-Setup-v1.0.0.exe" class="btn">
                     ⬇️ Установщик (рекомендуется)
                 </a>
-                <a href="https://github.com/YOUR_USERNAME/YOUR_REPOSITORY/releases/latest/download/ChatList-v1.0.0.exe" class="btn btn-secondary">
+                <a href="https://github.com/vildan-kharisov/ChatList/releases/latest/download/ChatList-v1.0.0.exe" class="btn btn-secondary">
                     📦 Portable версия
                 </a>
                 <p style="margin-top: 20px; font-size: 0.9em; color: #666;">
-                    Все релизы доступны на <a href="https://github.com/YOUR_USERNAME/YOUR_REPOSITORY/releases" style="color: #667eea;">странице релизов</a>
+                    Все релизы доступны на <a href="https://github.com/vildan-kharisov/ChatList/releases" style="color: #667eea;">странице релизов</a>
                 </p>
             </div>
             
@@ -287,40 +286,40 @@
             
             <section style="margin-top: 40px;">
                 <h2>📚 Документация</h2>
-                <p>Подробная документация доступна в <a href="https://github.com/YOUR_USERNAME/YOUR_REPOSITORY/blob/main/README.md" style="color: #667eea;">README.md</a></p>
+                <p>Подробная документация доступна в <a href="https://github.com/vildan-kharisov/ChatList/blob/main/README.md" style="color: #667eea;">README.md</a></p>
             </section>
             
             <section style="margin-top: 40px;">
                 <h2>🐛 Сообщить о проблеме</h2>
-                <p>Нашли ошибку или есть предложение? Создайте <a href="https://github.com/YOUR_USERNAME/YOUR_REPOSITORY/issues" style="color: #667eea;">Issue на GitHub</a></p>
+                <p>Нашли ошибку или есть предложение? Создайте <a href="https://github.com/vildan-kharisov/ChatList/issues" style="color: #667eea;">Issue на GitHub</a></p>
             </section>
         </div>
         
         <footer>
             <p>© 2024 ChatList. Разработано с ❤️ на Python и PyQt5</p>
             <p style="margin-top: 10px;">
-                <a href="https://github.com/YOUR_USERNAME/YOUR_REPOSITORY" style="color: white; text-decoration: underline;" id="github-link">GitHub</a> |
-                <a href="https://github.com/YOUR_USERNAME/YOUR_REPOSITORY/releases" style="color: white; text-decoration: underline;" id="releases-footer-link">Релизы</a> |
-                <a href="https://github.com/YOUR_USERNAME/YOUR_REPOSITORY/issues" style="color: white; text-decoration: underline;" id="issues-link">Issues</a>
+                <a href="https://github.com/vildan-kharisov/ChatList" style="color: white; text-decoration: underline;" id="github-link">GitHub</a> |
+                <a href="https://github.com/vildan-kharisov/ChatList/releases" style="color: white; text-decoration: underline;" id="releases-footer-link">Релизы</a> |
+                <a href="https://github.com/vildan-kharisov/ChatList/issues" style="color: white; text-decoration: underline;" id="issues-link">Issues</a>
             </p>
         </footer>
     </div>
     
     <script>
         // Замените YOUR_USERNAME и YOUR_REPOSITORY на ваши данные
-        const GITHUB_USERNAME = 'YOUR_USERNAME';
-        const GITHUB_REPOSITORY = 'YOUR_REPOSITORY';
+        const GITHUB_USERNAME = 'vildan-kharisov';
+        const GITHUB_REPOSITORY = 'ChatList';
         const GITHUB_BASE = `https://github.com/${GITHUB_USERNAME}/${GITHUB_REPOSITORY}`;
         
         // Обновление всех ссылок
         document.querySelectorAll('[id$="-link"]').forEach(link => {
-            if (link.href.includes('YOUR_USERNAME')) {
-                link.href = link.href.replace('YOUR_USERNAME/YOUR_REPOSITORY', `${GITHUB_USERNAME}/${GITHUB_REPOSITORY}`);
+            if (link.href.includes('vildan-kharisov')) {
+                link.href = link.href.replace('vildan-kharisov/ChatList', `${GITHUB_USERNAME}/${GITHUB_REPOSITORY}`);
             }
         });
         
         // Автоматическое обновление ссылок на последний релиз
-        if (GITHUB_USERNAME !== 'YOUR_USERNAME' && GITHUB_REPOSITORY !== 'YOUR_REPOSITORY') {
+        if (GITHUB_USERNAME !== 'vildan-kharisov' && GITHUB_REPOSITORY !== 'ChatList') {
             fetch(`https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPOSITORY}/releases/latest`)
                 .then(response => response.json())
                 .then(data => {

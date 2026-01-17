@@ -2,8 +2,8 @@
 
 Приложение для сравнения ответов различных нейросетей на один и тот же промт.
 
-🌐 **Лендинг**: [GitHub Pages](https://YOUR_USERNAME.github.io/YOUR_REPOSITORY/)  
-📥 **Скачать**: [Последний релиз](https://github.com/YOUR_USERNAME/YOUR_REPOSITORY/releases/latest)
+🌐 **Лендинг**: [GitHub Pages](https://vildan-kharisov.github.io/YOUR_REPOSITORY/)  
+📥 **Скачать**: [Последний релиз](https://github.com/vildan-kharisov/ChatList/releases/latest)
 
 ## Описание
 

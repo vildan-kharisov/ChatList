@@ -55,7 +55,7 @@ ChatList - это приложение для сравнения ответов 
 
 ## 📚 Документация
 
-Подробная документация доступна в [README.md](https://github.com/YOUR_USERNAME/YOUR_REPOSITORY/blob/main/README.md)
+Подробная документация доступна в [README.md](https://github.com/vildan-kharisov/ChatList/blob/main/README.md)
 
 ## 🙏 Благодарности
 
@@ -63,4 +63,4 @@ ChatList - это приложение для сравнения ответов 
 
 ---
 
-**Скачать**: [ChatList-Setup-v1.0.0.exe](https://github.com/YOUR_USERNAME/YOUR_REPOSITORY/releases/download/v1.0.0/ChatList-Setup-v1.0.0.exe)
+**Скачать**: [ChatList-Setup-v1.0.0.exe](https://github.com/vildan-kharisov/ChatList/releases/download/v1.0.0/ChatList-Setup-v1.0.0.exe)
