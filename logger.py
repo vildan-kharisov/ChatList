@@ -8,17 +8,48 @@ import logging
 import os
 from datetime import datetime
 from typing import Dict, Any
+import version
 
 
-LOG_DIR = 'logs'
+def get_log_dir():
+    """Получить путь к директории для логов"""
+    # Сначала пробуем создать в текущей директории (для разработки)
+    local_log_dir = 'logs'
+    try:
+        if not os.path.exists(local_log_dir):
+            os.makedirs(local_log_dir)
+        # Проверяем, можем ли мы писать в эту директорию
+        test_file = os.path.join(local_log_dir, '.test_write')
+        try:
+            with open(test_file, 'w') as f:
+                f.write('test')
+            os.remove(test_file)
+            return local_log_dir
+        except (PermissionError, OSError):
+            pass
+    except (PermissionError, OSError):
+        pass
+    
+    # Если не получилось, используем пользовательскую директорию
+    appdata_dir = os.path.join(os.getenv('APPDATA', os.path.expanduser('~')), 'ChatList')
+    log_dir = os.path.join(appdata_dir, 'logs')
+    try:
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir, exist_ok=True)
+        return log_dir
+    except Exception:
+        # В крайнем случае используем временную директорию
+        import tempfile
+        return os.path.join(tempfile.gettempdir(), 'ChatList', 'logs')
+
+
+LOG_DIR = get_log_dir()
 LOG_FILE = os.path.join(LOG_DIR, 'chatlist.log')
 
 
 def setup_logger():
     """Настройка логгера"""
-    # Создание директории для логов
-    if not os.path.exists(LOG_DIR):
-        os.makedirs(LOG_DIR)
+    # Директория уже создана в get_log_dir()
     
     # Настройка формата логирования
     log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -32,11 +63,15 @@ def setup_logger():
     logger.handlers.clear()
     
     # Обработчик для файла
-    file_handler = logging.FileHandler(LOG_FILE, encoding='utf-8')
-    file_handler.setLevel(logging.INFO)
-    file_formatter = logging.Formatter(log_format, date_format)
-    file_handler.setFormatter(file_formatter)
-    logger.addHandler(file_handler)
+    try:
+        file_handler = logging.FileHandler(LOG_FILE, encoding='utf-8')
+        file_handler.setLevel(logging.INFO)
+        file_formatter = logging.Formatter(log_format, date_format)
+        file_handler.setFormatter(file_formatter)
+        logger.addHandler(file_handler)
+    except Exception as e:
+        # Если не удалось создать файловый обработчик, продолжаем без него
+        pass
     
     # Обработчик для консоли (опционально)
     console_handler = logging.StreamHandler()
@@ -44,6 +79,9 @@ def setup_logger():
     console_formatter = logging.Formatter(log_format, date_format)
     console_handler.setFormatter(console_formatter)
     logger.addHandler(console_handler)
+    
+    # Логирование версии при старте (после настройки обработчиков)
+    logger.info(f"ChatList v{version.__version__} - Запуск приложения")
     
     return logger
 

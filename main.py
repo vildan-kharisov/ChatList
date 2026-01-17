@@ -20,6 +20,7 @@ import db
 import models
 import network
 import prompt_improver
+import version
 
 
 class RequestWorker(QThread):
@@ -846,8 +847,8 @@ class MainWindow(QMainWindow):
     
     def show_about(self):
         """Показать информацию о программе"""
-        about_text = """
-        <h2>ChatList v1.0</h2>
+        about_text = f"""
+        <h2>ChatList v{version.__version__}</h2>
         <p><b>Приложение для сравнения ответов различных нейросетей</b></p>
         <p>ChatList позволяет отправлять один и тот же промт в несколько нейросетей одновременно и сравнивать их ответы в удобной таблице.</p>
         <hr>
@@ -1936,6 +1937,8 @@ class ResponseViewDialog(QDialog):
 
 def main():
     app = QApplication(sys.argv)
+    app.setApplicationName('ChatList')
+    app.setApplicationVersion(version.__version__)
     
     # Установка иконки приложения
     try:
@@ -1945,6 +1948,10 @@ def main():
             app.setWindowIcon(QIcon(icon_path))
     except Exception:
         pass  # Игнорируем ошибки при загрузке иконки
+    
+    # Логирование версии при старте
+    import logger
+    logger.logger.info(f"ChatList v{version.__version__} - Запуск приложения")
     
     window = MainWindow()
     window.show()

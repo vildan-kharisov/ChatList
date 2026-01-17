@@ -6,11 +6,64 @@
 
 import sqlite3
 import json
+import os
 from datetime import datetime
 from typing import List, Dict, Optional, Any
 
 
-DB_NAME = 'chatlist.db'
+def get_db_path():
+    """Получить путь к базе данных"""
+    # Сначала пробуем использовать текущую директорию (для разработки)
+    local_db = 'chatlist.db'
+    local_db_path = os.path.abspath(local_db)
+    
+    # Проверяем, можем ли мы писать в текущую директорию
+    try:
+        # Проверяем права на запись в директории
+        test_file = os.path.join(os.path.dirname(local_db_path) or '.', '.test_write_chatlist')
+        try:
+            with open(test_file, 'w') as f:
+                f.write('test')
+            os.remove(test_file)
+            # Если получилось, используем локальную базу
+            return local_db
+        except (PermissionError, OSError):
+            pass
+    except (PermissionError, OSError):
+        pass
+    
+    # Если не получилось, используем пользовательскую директорию
+    appdata_dir = os.path.join(os.getenv('APPDATA', os.path.expanduser('~')), 'ChatList')
+    try:
+        if not os.path.exists(appdata_dir):
+            os.makedirs(appdata_dir, exist_ok=True)
+        # Проверяем права на запись в пользовательской директории
+        test_file = os.path.join(appdata_dir, '.test_write_chatlist')
+        try:
+            with open(test_file, 'w') as f:
+                f.write('test')
+            os.remove(test_file)
+            db_path = os.path.join(appdata_dir, 'chatlist.db')
+            return db_path
+        except (PermissionError, OSError):
+            pass
+    except Exception:
+        pass
+    
+    # В крайнем случае используем временную директорию
+    try:
+        import tempfile
+        temp_dir = os.path.join(tempfile.gettempdir(), 'ChatList')
+        if not os.path.exists(temp_dir):
+            os.makedirs(temp_dir, exist_ok=True)
+        return os.path.join(temp_dir, 'chatlist.db')
+    except Exception:
+        # Последний вариант - домашняя директория пользователя
+        home_dir = os.path.expanduser('~')
+        return os.path.join(home_dir, 'chatlist.db')
+
+
+DB_NAME = get_db_path()
 
 
 def get_connection():

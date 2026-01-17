@@ -31,3 +31,8 @@ Thumbs.db
 *.db
 chatlist.db
 logs/
+
+# Installer
+installer/
+version.tmp
+*.iss.bak
